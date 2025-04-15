@@ -1,8 +1,10 @@
 extends CharacterBody3D
+class_name Player
 
 @onready var ray = $RayCast3D
 
 var moving = false
+var rotating = false
 
 var unit_scale = 3.0
 
@@ -10,14 +12,18 @@ func set_can_move():
 	moving = false
 
 func rotate_body(dir: float):
-	var tween = create_tween()
-	tween.tween_property(self, "rotation_degrees:y", rotation_degrees.y + dir, 0.2)
+	if get_tree().get_processed_tweens().is_empty():
+		var tween = create_tween()
+		rotating = true
+		tween.tween_property(self, "rotation_degrees:y", rotation_degrees.y + dir, 0.2)
+		tween.parallel()
+		tween.tween_property(self, "rotating", false, 0.2)
 
 func move(dir: Vector3):
 	var new_movement = (basis * (dir*3))
 	ray.target_position = dir * 3
 	ray.force_raycast_update() 
-	if not ray.is_colliding():
+	if not ray.is_colliding() and get_tree().get_processed_tweens().is_empty():
 		moving = true
 		var tween = create_tween()
 		var final_pos = global_position + new_movement
@@ -30,10 +36,11 @@ func move(dir: Vector3):
 
 func _process(delta):
 	
-	if Input.is_action_just_pressed("turn_left"):
-		rotate_body(90)
-	if Input.is_action_just_pressed("turn_right"):
-		rotate_body(-90)
+	if not rotating:
+		if Input.is_action_just_pressed("turn_left"):
+			rotate_body(90)
+		if Input.is_action_just_pressed("turn_right"):
+			rotate_body(-90)
 	
 	if not moving:
 		var forward_movement = Input.get_axis("forward", "backward")
